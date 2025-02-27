@@ -14,9 +14,9 @@ internal class Program
         var bot = new MaboroshiBot(
             config: new DeserializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build()
                 .Deserialize<BotConfig>(await File.ReadAllTextAsync("config.yml")),
-            sendToUser: (message =>
+            sendToUser: ((message, file) =>
             {
-                Console.WriteLine($"\nBot> {message}");
+                Console.WriteLine($"\nBot> {message} ( voice(if have): {file} )");
                 return Task.CompletedTask;
             }));
 
@@ -30,5 +30,5 @@ internal class Program
             }
             await bot.GetResponse(s!);
         }
-    }
+    } 
 }

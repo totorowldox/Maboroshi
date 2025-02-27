@@ -18,8 +18,8 @@ public class MaboroshiBot : IDisposable
     public VectorDatabase VectorDatabase { get; }
     public bool IsResponding { get; private set; }
     public Container Container { get; }
-
-    private Func<string, Task> SendToUser { get; }
+    
+    public Func<string, string, Task> SendToUser { get; }
 
     private readonly ChatCompletionOptions _chatOption;
     private readonly string _systemPrompt;
@@ -32,12 +32,20 @@ public class MaboroshiBot : IDisposable
     private string _userMessageQueue = string.Empty;
     private bool _isWaiting;
 
-    public MaboroshiBot(BotConfig config, Func<string, Task> sendToUser, Container? container = null)
+    public MaboroshiBot(BotConfig config, Func<string, string, Task> sendToUser, Container? container = null)
     {
         BotConfig = config;
         SendToUser = sendToUser;
 
         Container = container ?? DefaultContainer;
+        
+        // Deal with optional features
+        if (BotConfig.Voice.Enable)
+        {
+            var type = Audio.Providers.Providers.ProviderList[BotConfig.Voice.Provider];
+            Container.Register(typeof(Audio.Providers.ISpeechProvider), type, Lifestyle.Singleton);
+        }
+        
         Container.RegisterInstance(this);
         Container.Verify();
         _toolCallManager = Container.GetInstance<ToolCallManager>();
@@ -57,16 +65,20 @@ public class MaboroshiBot : IDisposable
         _client = api.GetChatClient(BotConfig.ApiModel);
         _history.Load(BotConfig.History.SavePath);
 
-        //Deal with optional features:
+        //Deal with optional features
         VectorDatabase.Load(BotConfig.VectorDbFile);
-        _toolCallManager.Initiate();
         if (BotConfig.Proactive.Enable)
         {
             _proactive = Container.GetInstance<ProactiveMessaging>();
             _proactive.StartProactiveThread();
         }
+        _toolCallManager.Initiate();
 
-        _toolCallManager.AppendAvailableToolCalls(_chatOption.Tools);
+        if (BotConfig.UseTools)
+        {
+            _toolCallManager.AppendAvailableToolCalls(_chatOption.Tools);
+        }
+        
         _systemPrompt = PromptRenderer.RenderInitialSystemPrompt(this, BotConfig);
     }
 
@@ -101,12 +113,21 @@ public class MaboroshiBot : IDisposable
             ResetCancellationToken();
             Console.WriteLine("[MABOROSHI-DEBUG] Response is interrupted.");
         }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MABOROSHI-ERROR] {ex.Message}");
+        }
         finally
         {
             ResetState();
         }
     }
 
+    public void AppendAssistantHistory(string message)
+    {
+        _history.AddMessage(ChatMessage.CreateAssistantMessage(message));
+    }
+    
     #region Helper Methods
 
     private void EnqueueUserMessage(string message, bool prependNewLine = false)
@@ -144,7 +165,7 @@ public class MaboroshiBot : IDisposable
         }
 
         _history.AddMessage(userMessage);
-        LogDebugMessages(messages);
+        //LogDebugMessages(messages);
         return messages;
     }
 
@@ -201,7 +222,7 @@ public class MaboroshiBot : IDisposable
     {
         foreach (var sentence in response.Split('\\'))
         {
-            await SendToUser(sentence);
+            await SendToUser(sentence, "");
             var delay = CalculateDelay(sentence);
             await Task.Delay(TimeSpan.FromSeconds(delay), _cts.Token);
         }
@@ -225,9 +246,7 @@ public class MaboroshiBot : IDisposable
     }
 
     #endregion
-
-
-
+    
     public void Dispose()
     {
         _cts.Cancel();
@@ -243,12 +262,13 @@ public class MaboroshiBot : IDisposable
             var container = new Container();
             container.Register<ITextSerializer, JsonSerializer>(Lifestyle.Singleton);
             container.Register<HistoryManager>(Lifestyle.Singleton);
-            container.Register<MemoryTools>(Lifestyle.Singleton);
-            container.Register<PersonificationTools>(Lifestyle.Singleton);
+            container.Register<MemoryAgent>(Lifestyle.Singleton);
+            container.Register<PersonificationAgent>(Lifestyle.Singleton);
             container.Register<ProactiveMessaging>(Lifestyle.Singleton);
             container.Register<ToolCallManager>(Lifestyle.Singleton);
             container.Register<VectorDatabase>(Lifestyle.Singleton);
             container.Register<VectorizationUtil>(Lifestyle.Singleton);
+            container.Register<Audio.AudioAgent>(Lifestyle.Singleton);
             return container;
         }
     }

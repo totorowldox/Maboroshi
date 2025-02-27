@@ -4,7 +4,7 @@ using OpenAI.Chat;
 
 namespace Maboroshi.Personification;
 
-public class PersonificationTools : IAgent
+public class PersonificationAgent : IAgent
 {
     private static readonly ChatTool DelayDefinition = ChatTool.CreateFunctionTool("delay",
         "Use it when you think you should remain silent for a specific time. " +

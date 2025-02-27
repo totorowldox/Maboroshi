@@ -1,4 +1,5 @@
-﻿using Maboroshi.Bot;
+﻿using Maboroshi.Audio;
+using Maboroshi.Bot;
 using Maboroshi.Memory;
 using Maboroshi.Personification;
 using OpenAI.Chat;
@@ -9,8 +10,9 @@ public class ToolCallManager(MaboroshiBot bot)
 {
     private List<IAgent> AvailableAgents { get; } =
     [
-        bot.Container.GetInstance<PersonificationTools>(),
-        bot.Container.GetInstance<MemoryTools>()
+        bot.Container.GetInstance<PersonificationAgent>(),
+        bot.Container.GetInstance<MemoryAgent>(),
+        bot.Container.GetInstance<AudioAgent>()
     ];
     
     private List<ToolWithFunction> AvailableTools { get; } = new();

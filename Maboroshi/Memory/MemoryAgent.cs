@@ -6,7 +6,7 @@ using OpenAI.Chat;
 
 namespace Maboroshi.Memory;
 
-public class MemoryTools(MaboroshiBot bot, VectorizationUtil vectorizationUtil) : IAgent
+public class MemoryAgent(MaboroshiBot bot, VectorizationUtil vectorizationUtil) : IAgent
 {
     private static readonly ChatTool StoreDefinition = ChatTool.CreateFunctionTool("store",
         "Use it when you think you should memorize something persistently, usually vital facts of the user, " +

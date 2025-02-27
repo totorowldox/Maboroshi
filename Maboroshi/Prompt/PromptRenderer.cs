@@ -19,7 +19,9 @@ public static class PromptRenderer
              User's message will be like [TIME] Content.
              You MUST consider the time when responding.
              You do not need to add [TIME] in your response.
-             You should split your response using \, e.g. "Hello, how are you?\I'm fine\what about you?"
+             You should split your response into individual sentences using \, 
+             and there should be no periods or commas beside it,
+             e.g. Hey\It's clear outside\Wanna hang out?
              """);
         sb.AppendLine("Here's some facts about the user: ");
         foreach (var fact in botConfig.UserProfile.Facts)

@@ -5,6 +5,7 @@ public class BotConfig
     public string ApiEndpoint { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public string ApiModel { get; set; } = string.Empty;
+    public bool UseTools { get; set; } = true;
     public float Temperature { get; set; } = 0.8f;
     public int MaxOutputToken { get; set; } = 2048;
     public bool EnableVectorDb { get; set; } = false;
@@ -28,6 +29,8 @@ public class BotConfig
     public ProactiveSettings Proactive { get; set; } = new();
     
     public HistorySettings History { get; set; } = new();
+    
+    public VoiceSettings Voice { get; set; } = new();
 }
 
 public class UserProfile
@@ -45,6 +48,13 @@ public class ProactiveSettings
     public double Probability { get; set; } = 0.003f;
     public string[] Prompts { get; set; } = [];
     public int[] DndHours { get; set; } = [];
+}
+
+public class VoiceSettings
+{
+    public bool Enable { get; set; } = false;
+    public Audio.Providers.ProviderEnum Provider { get; set; } = Audio.Providers.ProviderEnum.Aivis;
+    public string SpeakerId { get; set; } = "0";
 }
 
 public class HistorySettings
