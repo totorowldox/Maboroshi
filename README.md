@@ -16,10 +16,10 @@ This project serves as a framework for future development and supports all model
 
 ## TODO
 
-- [ ] Test the VectorDB solution for persistent memory
+- [ ] Improve the VectorDB solution for persistent memory
 - [ ] Implement customizable agents
 - [ ] Develop RAG Q&A functionality
-- [ ] Integrate additional model APIs (e.g., Ollama for local models)
+- [ ] ~~Integrate additional model APIs (e.g., Ollama for local models)~~ **Not prioritized**
 
 ## Implementation
 
@@ -34,6 +34,8 @@ var bot = new MaboroshiBot(config /* An instance of BotConfig */,
 _ = bot.GetResponse("Hello!");
 ```
 
+This repo's `Program.cs` demonstrates a simple implementation in console apps.
+
 ## Configuration
 
 Assuming you are using a YAML configuration file, `config.yaml` should look like this:
@@ -43,6 +45,7 @@ Assuming you are using a YAML configuration file, `config.yaml` should look like
 apiEndpoint: "https://api.openai.com/v1/" 
 apiKey: "sk-XXX"
 apiModel: "gpt-4o-mini"
+useTools: true # Set to true if the model support function calling
 temperature: 1.3
 maxOutputToken: 2048
 
@@ -94,6 +97,15 @@ proactive:
 history:
   savePath: "history.json"
   bringToContext: 20
+
+# Voice Synthesis Settings
+voice:
+  enable: true
+  provider: VoiceVox
+  # Aivis
+  # VoiceVox
+  # ...
+  speakerId: "2" # 四国めたん ノーマル
 ```
 
 ## Acknowledgements
@@ -101,5 +113,7 @@ history:
 - [YamlDotNet](https://github.com/aaubry/YamlDotNet)
 - [SimpleInjector](https://github.com/simpleinjector/SimpleInjector)
 - [openai-dotnet](https://github.com/openai/openai-dotnet)
+- [Aivis Project](https://github.com/Aivis-Project)
+- [VOICEVOX](https://github.com/VOICEVOX)
 
 Special thanks to [DeepSeek's reasoning model](https://github.com/deepseek-ai/DeepSeek-R1) for inspiring the creation of this project.
