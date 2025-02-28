@@ -6,6 +6,7 @@ public class BotConfig
     public string ApiKey { get; set; } = string.Empty;
     public string ApiModel { get; set; } = string.Empty;
     public bool UseTools { get; set; } = true;
+    public bool UseCot { get; set; } = false;
     public float Temperature { get; set; } = 0.8f;
     public int MaxOutputToken { get; set; } = 2048;
     public bool EnableVectorDb { get; set; } = false;

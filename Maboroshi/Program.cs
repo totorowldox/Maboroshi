@@ -26,9 +26,11 @@ internal class Program
             var s = Console.ReadLine();
             if (s == ".exit")
             {
-                return;
+                break;
             }
             await bot.GetResponse(s!);
         }
+        
+        bot.Dispose();
     } 
 }

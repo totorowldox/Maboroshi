@@ -79,7 +79,7 @@ public class MaboroshiBot : IDisposable
             _toolCallManager.AppendAvailableToolCalls(_chatOption.Tools);
         }
         
-        _systemPrompt = PromptRenderer.RenderInitialSystemPrompt(this, BotConfig);
+        _systemPrompt = PromptRenderer.RenderInitialSystemPrompt(BotConfig);
     }
 
     public async Task GetResponse(string message)
@@ -105,6 +105,7 @@ public class MaboroshiBot : IDisposable
             var response = await ProcessChatCompletionAsync(messages);
             if (!string.IsNullOrEmpty(response))
             {
+                response = BotConfig.UseCot ? PromptRenderer.ExtractUserResponse(response) : response;
                 await SendFormattedResponseAsync(response);
             }
         }
@@ -222,9 +223,10 @@ public class MaboroshiBot : IDisposable
     {
         foreach (var sentence in response.Split('\\'))
         {
-            await SendToUser(sentence, "");
-            var delay = CalculateDelay(sentence);
+            var msg = sentence.Trim();
+            var delay = CalculateDelay(msg);
             await Task.Delay(TimeSpan.FromSeconds(delay), _cts.Token);
+            await SendToUser(msg, "");
         }
     }
 

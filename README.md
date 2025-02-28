@@ -13,6 +13,7 @@ This project serves as a framework for future development and supports all model
 - Personified responses
 - Ability to wait for multiple messages
 - Simple implementation
+- Chain of Thought support
 
 ## TODO
 
@@ -46,6 +47,7 @@ apiEndpoint: "https://api.openai.com/v1/"
 apiKey: "sk-XXX"
 apiModel: "gpt-4o-mini"
 useTools: true # Set to true if the model support function calling
+useCot: true # Set to true if you want the model to use chain of thought, may improve response quality
 temperature: 1.3
 maxOutputToken: 2048
 
