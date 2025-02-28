@@ -106,6 +106,9 @@ public class MaboroshiBot : IDisposable
             if (!string.IsNullOrEmpty(response))
             {
                 response = BotConfig.UseCot ? PromptRenderer.ExtractUserResponse(response) : response;
+                var assistantMessage = ChatMessage.CreateAssistantMessage(response);
+                messages.Add(assistantMessage);
+                _history.AddMessage(assistantMessage);
                 await SendFormattedResponseAsync(response);
             }
         }
@@ -188,9 +191,6 @@ public class MaboroshiBot : IDisposable
             {
                 case ChatFinishReason.Stop:
                     response = ret.Value.Content.First().Text.TrimEnd('\n');
-                    var assistantMessage = ChatMessage.CreateAssistantMessage(response);
-                    messages.Add(assistantMessage);
-                    _history.AddMessage(assistantMessage);
                     return response;
 
                 case ChatFinishReason.Length:
