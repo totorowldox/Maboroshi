@@ -7,6 +7,8 @@ public class VectorEntry
 {
     public string Text { get; init; } = "";
     public float[] Vector { get; init; } = [];
+    
+    public DateTime Date { get; init; } = DateTime.Now;
 }
 
 public class QueryResult
@@ -21,7 +23,7 @@ public class VectorDatabase(MaboroshiBot bot, ITextSerializer serializer)
 
     public void AddText(string text, float[] vector)
     {
-        _entries.Add(new VectorEntry { Text = text, Vector = vector });
+        _entries.Add(new VectorEntry { Text = text, Vector = vector, Date = DateTime.Now });
         Save(bot.BotConfig.VectorDbFile);
     }
 

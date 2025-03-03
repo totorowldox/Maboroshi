@@ -11,7 +11,7 @@ public class MemoryAgent(MaboroshiBot bot, VectorizationUtil vectorizationUtil) 
     private static readonly ChatTool StoreDefinition = ChatTool.CreateFunctionTool("store",
         "Use it when you think you should memorize something persistently, usually vital facts of the user, " +
         "should not be AMBIGUOUS. Use simple declarative sentences." +
-        "Example: The user’s name is John.\nReturns OK.",
+        "Example: Name is John.\nReturns OK.",
         BinaryData.FromBytes("""
                              {
                                  "type": "object",
@@ -44,7 +44,7 @@ public class MemoryAgent(MaboroshiBot bot, VectorizationUtil vectorizationUtil) 
     private static readonly ChatTool DeleteDefinition = ChatTool.CreateFunctionTool("delete",
         "Use it when you find something conflicting in the memories and the user's speech, " +
         "you should give out the similar text stored in memory. USE WITH CAUTION." +
-        "Example as: The user’s name is Mike.",
+        "Example as: Name is Mike.",
         BinaryData.FromBytes("""
                              {
                                  "type": "object",

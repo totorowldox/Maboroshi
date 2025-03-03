@@ -17,6 +17,9 @@ public static partial class PromptRenderer
            In this situation, think about what functions do you have, 
            and if the function suits the case, then call it directly.
            If you decide not to use any of the functions, follow the rest of the steps.
+           Specially, DO try to export user's long term preferences or interests or things likely to be part of an ongoing task.
+           After that, use the `store` function to store them in individual simple sentences,
+           for example: "Name is John", "Like red", "Live in New York"
 
         1. **Internal Chain-of-Thought Analysis (Hidden from User)**:  
            - Enclose all reasoning, logical steps, and emotional analysis within `<think>` tags.  
@@ -45,7 +48,25 @@ public static partial class PromptRenderer
         - Ethical check: Ensure response doesn't trivialize their struggle.  
         </think>  
         "I’m truly sorry you’re feeling this way—burnout can make everything seem heavy. Sometimes, even small shifts in routine or boundaries can create space to breathe. Would it help to explore ways to carve out moments of rest, even in a demanding job?"
+        
+        **Important Rules**:  
+        - Always include the `<think>` section in your response.
+        - Never skip or alter the format.
         """;
+    
+    /*
+     
+    3. **User Memory Layer (Also Hidden from User)**
+    - Analyze user's input, export vital facts you want to remember about the user.
+    - If there's nothing useful, skip this step without the `<memory>` tags.
+    - Enclose these memory within `<memory>` tags.
+    - Use simple declarative sentences seperated with |
+    - Example as: 
+    <memory>
+    Name is John|Age is 17|Favorite color is red
+    </memory>
+
+     */
     
     public static string RenderInitialSystemPrompt(BotConfig botConfig)
     {
@@ -62,10 +83,6 @@ public static partial class PromptRenderer
              and there should be no periods or commas beside it,
              e.g. Hey\It's clear outside\Wanna hang out?
              """);
-        if (botConfig.UseCot)
-        {
-            sb.AppendLine(ChainOfThoughtPrompt);
-        }
         sb.AppendLine("Here's some facts about the user: ");
         foreach (var fact in botConfig.UserProfile.Facts)
         {
@@ -75,6 +92,11 @@ public static partial class PromptRenderer
         foreach(var goal in botConfig.UserProfile.Goals)
         {
             sb.AppendLine($"- {goal}");
+        }
+        sb.AppendLine("--------------");
+        if (botConfig.UseCot)
+        {
+            sb.AppendLine(ChainOfThoughtPrompt);
         }
 
         // sb.AppendLine("--------------");
@@ -95,16 +117,30 @@ public static partial class PromptRenderer
     public static string ExtractUserResponse(string msgWithCot)
     {
         var match = CotRegex().Match(msgWithCot);
-
         if (!match.Success)
         {
-            throw new Exception($"Not a valid message: {msgWithCot}");
+            Console.WriteLine($"[MABOROSHI-WARNING] Cot enabled but the model doesn't reply in given format: {msgWithCot}");
+            return msgWithCot;
         }
-        
         Console.WriteLine($"[MABOROSHI-DEBUG] Cot Content: {match.Groups[1].Value}");
-        return match.Groups[2].Value.Trim();
-    }
+        var msg = match.Groups[2].Value.Trim();
 
+        return msg;
+        // if (!msg.Contains("<memory>"))
+        // {
+        //     return (msg, "");
+        // }
+        //
+        // match = MemoryRegex().Match(msg);
+        // if (!match.Success)
+        // {
+        //     throw new Exception($"Not a valid memory: {msg}");
+        // }
+        // Console.WriteLine($"[MABOROSHI-DEBUG] Memory Content: {match.Groups[2].Value}");
+        // return (match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim());
+
+    }
+    
     public static string RenderProactiveMessagePrompt(string choice)
     {
         var sb = new StringBuilder();
@@ -115,4 +151,7 @@ public static partial class PromptRenderer
 
     [GeneratedRegex(@"<think>([\s\S]*?)</think>([\s\S]*)")]
     private static partial Regex CotRegex();
+    
+    [GeneratedRegex(@"([\s\S]*?)<memory>([\s\S]*?)</memory>")]
+    private static partial Regex MemoryRegex();
 }
