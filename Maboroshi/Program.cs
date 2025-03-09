@@ -1,5 +1,6 @@
 ﻿using Maboroshi.Bot;
 using Maboroshi.Config;
+using Spectre.Console;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -9,21 +10,22 @@ internal class Program
 {
     private static async Task Main()
     {
-        Console.WriteLine("Welcome to Maboroshi!");
+        AnsiConsole.Write(new FigletText("MABOROSHI").LeftJustified().Color(Color.Aquamarine1));
+        
+        AnsiConsole.WriteLine("Welcome to Maboroshi!");
 
         var bot = new MaboroshiBot(
             config: new DeserializerBuilder().WithNamingConvention(CamelCaseNamingConvention.Instance).Build()
                 .Deserialize<BotConfig>(await File.ReadAllTextAsync("config.yml")),
             sendToUser: ((message, file) =>
             {
-                Console.WriteLine($"\nBot> {message} ( voice(if have): {file} )");
+                AnsiConsole.WriteLine($"\nBot> {message} ( voice(if have): {file} )");
                 return Task.CompletedTask;
             }));
 
         while (true)
         {
-            Console.Write("\nYou> ");
-            var s = Console.ReadLine();
+            var s = await AnsiConsole.AskAsync<string>("\nYou> ");
             if (s == ".exit")
             {
                 break;

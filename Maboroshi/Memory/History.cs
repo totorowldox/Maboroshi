@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using Maboroshi.Serialization;
+using Maboroshi.Util;
 using OpenAI.Chat;
 
 // ReSharper disable RedundantCast
@@ -37,7 +38,7 @@ public class HistoryManager(ITextSerializer serializer)
     public void Save()
     {
         File.WriteAllText(_savePath, serializer.Serialize(Histories));
-        Console.WriteLine("[MABOROSHI-DEBUG] History file saved.");
+        Log.Info("History file saved.");
     }
 
     public void Load(string savePath)
@@ -49,6 +50,6 @@ public class HistoryManager(ITextSerializer serializer)
         }
         var content = File.ReadAllText(savePath);
         Histories = serializer.Deserialize<List<History>>(content) ?? [];
-        Console.WriteLine("[MABOROSHI-DEBUG] History file loaded.");
+        Log.Info("History file loaded.");
     }
 }

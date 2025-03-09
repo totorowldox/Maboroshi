@@ -2,6 +2,7 @@
 using Maboroshi.Audio.Providers;
 using Maboroshi.Bot;
 using Maboroshi.ToolCall;
+using Maboroshi.Util;
 using OpenAI.Chat;
 
 namespace Maboroshi.Audio;
@@ -45,7 +46,7 @@ public class AudioAgent(MaboroshiBot bot, ISpeechProvider speech) : IAgent
         }
         catch
         {
-            Console.WriteLine("[MABOROSHI-DEBUG] Audio synthesis failed");
+            Log.Error("Audio synthesis failed");
         }
         return "OK";
     }

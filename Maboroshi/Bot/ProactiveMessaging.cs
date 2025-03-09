@@ -32,7 +32,7 @@ public class ProactiveMessaging(MaboroshiBot bot) : IDisposable
                 var randomChoice =
                     bot.BotConfig.Proactive.Prompts[
                         Random.Shared.Next(bot.BotConfig.Proactive.Prompts.Length)];
-                
+
                 Console.WriteLine($"\n[MABOROSHI-DEBUG] Triggering a proactive message, content: {randomChoice}");
 
                 await bot.GetResponse(PromptRenderer.RenderProactiveMessagePrompt(randomChoice));
@@ -41,6 +41,10 @@ public class ProactiveMessaging(MaboroshiBot bot) : IDisposable
         catch (OperationCanceledException)
         {
             // Disposed
+        }
+        catch (Exception ex)
+        {
+            // Request failed
         }
     }
     
