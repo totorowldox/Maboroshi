@@ -1,5 +1,6 @@
 ﻿using Maboroshi.Bot;
 using Maboroshi.Serialization;
+using Maboroshi.Util;
 
 namespace Maboroshi.Memory;
 
@@ -61,7 +62,7 @@ public class VectorDatabase(MaboroshiBot bot, ITextSerializer serializer)
     {
         if (!File.Exists(filePath))
         {
-            Console.WriteLine("[MABOROSHI-DEBUG] No vector database found, creating a new one.");
+            Log.Debug("No vector database found, creating a new one.");
             _entries = [];
             return;
         }

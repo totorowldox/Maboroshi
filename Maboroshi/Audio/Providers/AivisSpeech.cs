@@ -1,5 +1,6 @@
 ﻿using Maboroshi.Bot;
 using Maboroshi.Serialization;
+using Maboroshi.Util;
 
 namespace Maboroshi.Audio.Providers;
 
@@ -41,7 +42,7 @@ public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeech
 
         // Generate audio query
         var query = await GenerateAudioQuery(text, speakerId);
-        Console.WriteLine("[AIVIS-SPEECH] Audio query generated: " + serializer.Serialize(query));
+         Log.Debug("Audio query generated: " + serializer.Serialize(query), "AIVIS-SPEECH");
 
         // Synthesize audio
         return await SynthesizeAudio(query, speakerId);
@@ -51,6 +52,6 @@ public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeech
     {
         await using var fs = new FileStream(outputFile, FileMode.Create, FileAccess.Write);
         await (await Synthesis(text)).CopyToAsync(fs);
-        Console.WriteLine($"[AIVIS-SPEECH] Audio synthesized and saved to {outputFile}");
+        Log.Debug($"Audio synthesized and saved to {outputFile}", "AIVIS-SPEECH");
     }
 }

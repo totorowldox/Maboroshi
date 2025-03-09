@@ -119,10 +119,10 @@ public static partial class PromptRenderer
         var match = CotRegex().Match(msgWithCot);
         if (!match.Success)
         {
-            Console.WriteLine($"[MABOROSHI-WARNING] Cot enabled but the model doesn't reply in given format: {msgWithCot}");
+            Log.Warning($"Cot enabled but the model doesn't reply in given format: {msgWithCot}", "COT");
             return msgWithCot;
         }
-        Console.WriteLine($"[MABOROSHI-DEBUG] Cot Content: {match.Groups[1].Value}");
+        Log.Debug($"Cot Content: {match.Groups[1].Value}", "COT");
         var msg = match.Groups[2].Value.Trim();
 
         return msg;

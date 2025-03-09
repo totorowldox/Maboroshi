@@ -2,6 +2,7 @@
 using Maboroshi.Bot;
 using Maboroshi.Memory;
 using Maboroshi.Personification;
+using Maboroshi.Util;
 using OpenAI.Chat;
 
 namespace Maboroshi.ToolCall;
@@ -21,7 +22,7 @@ public class ToolCallManager(MaboroshiBot bot)
     {
         foreach (var agent in AvailableAgents.Where(agent => agent.Enabled))
         {
-            Console.WriteLine($"[MABOROSHI-DEBUG] Adding agent: {agent.Name} : {agent.Description}");
+            Log.Info($"Adding agent: {agent.Name} : {agent.Description}", "AGENT");
             AvailableTools.AddRange(agent.Tools);
         }
     }
@@ -46,7 +47,7 @@ public class ToolCallManager(MaboroshiBot bot)
             else
             {
                 requiresAction |= tool.RequiresAction;
-                Console.WriteLine($"[MABOROSHI-DEBUG] Tool call: {call.FunctionName} with arguments: {call.FunctionArguments}");
+                Log.Debug($"Tool call: {call.FunctionName} with arguments: {call.FunctionArguments}", "AGENT");
                 var ret = await tool.Function(call.FunctionArguments.ToString(), token);
                 messages.Add(new ToolChatMessage(call.Id, ret));
             }

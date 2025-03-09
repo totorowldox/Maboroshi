@@ -87,7 +87,6 @@ public class MaboroshiBot : IDisposable
         if (_isWaiting)
         {
             EnqueueUserMessage(message, prependNewLine: true);
-            return;
         }
 
         if (IsResponding)
@@ -115,11 +114,12 @@ public class MaboroshiBot : IDisposable
         catch (OperationCanceledException)
         {
             ResetCancellationToken();
-            Console.WriteLine("[MABOROSHI-DEBUG] Response is interrupted.");
+            Log.Info("[MABOROSHI-DEBUG] Response is interrupted.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MABOROSHI-ERROR] {ex.Message}");
+            Log.Error($"[MABOROSHI-ERROR] {ex.Message}");
+            throw;
         }
         finally
         {
@@ -176,7 +176,7 @@ public class MaboroshiBot : IDisposable
     private void LogDebugMessages(List<ChatMessage> messages)
     {
         var debugContent = string.Join("\n>>> ", messages.Select(m => m.Content.First().Text));
-        Console.WriteLine($"[MABOROSHI-DEBUG] Getting response, bringing with recent context: \n>>> {debugContent}");
+        Log.Debug($"Getting response, bringing with recent context: \n>>> {debugContent}");
     }
 
     private async Task<string> ProcessChatCompletionAsync(List<ChatMessage> messages)
