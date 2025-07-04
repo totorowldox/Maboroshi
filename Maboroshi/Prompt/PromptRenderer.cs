@@ -1,6 +1,7 @@
 ﻿using System.Text;
 using System.Text.RegularExpressions;
 using Maboroshi.Config;
+using Maboroshi.Memory;
 using Maboroshi.Util;
 
 namespace Maboroshi.Prompt;
@@ -9,17 +10,17 @@ public static partial class PromptRenderer
 {
 
     private const string ChainOfThoughtPrompt =
+        
+        /*0. Special: **Function Calling**
+   In this situation, think about what functions do you have, 
+   and if the function suits the case, then call it directly.
+   If you decide not to use any of the functions, follow the rest of the steps.
+   Specially, DO try to export user's long term preferences or interests or things likely to be part of an ongoing task.
+   After that, use the `store` function to store them in individual simple sentences,
+   for example: "Name is John", "Like red", "Live in New York"*/
         """
         ## Chain Of Thought:
         When responding to users, **strictly follow these steps**:
-
-        0. Special: **Function Calling**
-           In this situation, think about what functions do you have, 
-           and if the function suits the case, then call it directly.
-           If you decide not to use any of the functions, follow the rest of the steps.
-           Specially, DO try to export user's long term preferences or interests or things likely to be part of an ongoing task.
-           After that, use the `store` function to store them in individual simple sentences,
-           for example: "Name is John", "Like red", "Live in New York"
 
         1. **Internal Chain-of-Thought Analysis (Hidden from User)**:  
            - Enclose all reasoning, logical steps, and emotional analysis within `<think>` tags.  
@@ -52,50 +53,36 @@ public static partial class PromptRenderer
         **Important Rules**:  
         - Always include the `<think>` section in your response.
         - Never skip or alter the format.
+        - You will NOT be able to see your previous COT contents(ommited for saving the token count), BUT STILL STRICTLY FOLLOW THE ABOVE STEPS.
         """;
     
-    /*
-     
-    3. **User Memory Layer (Also Hidden from User)**
-    - Analyze user's input, export vital facts you want to remember about the user.
-    - If there's nothing useful, skip this step without the `<memory>` tags.
-    - Enclose these memory within `<memory>` tags.
-    - Use simple declarative sentences seperated with |
-    - Example as: 
-    <memory>
-    Name is John|Age is 17|Favorite color is red
-    </memory>
-
-     */
-    
-    public static string RenderInitialSystemPrompt(BotConfig botConfig)
+    public static string RenderInitialSystemPrompt(BotConfig botConfig, HistoryManager historyManager)
     {
         var sb = new StringBuilder();
         sb.AppendLine(
             $"""
+             You are now {botConfig.BotName}.
              The user's name is {botConfig.UserProfile.Name}.
              You MUST respond user in {botConfig.UserProfile.Language}.
              Use second person pronouns or the user's name to call the user.
              User's message will be like [TIME] Content.
              You MUST consider the time when responding.
              You do not need to add [TIME] in your response.
-             You should split your response into individual sentences using \, 
-             and there should be no periods or commas beside it,
-             e.g. Hey\It's clear outside\Wanna hang out?
+             Separate sentences with backslashes. No periods or commas. Example: Hello\World.
              """);
         sb.AppendLine("Here's some facts about the user: ");
         foreach (var fact in botConfig.UserProfile.Facts)
         {
             sb.AppendLine($"- {fact}");
         }
-        sb.AppendLine("Here's the user's goal, you should try to fulfill it: ");
+        sb.AppendLine("Here's the user's goal, you should try to pursue and fulfill it: ");
         foreach(var goal in botConfig.UserProfile.Goals)
         {
             sb.AppendLine($"- {goal}");
         }
-        sb.AppendLine("--------------");
         if (botConfig.UseCot)
         {
+            sb.AppendLine("-------COT RULES-------");
             sb.AppendLine(ChainOfThoughtPrompt);
         }
 
@@ -104,8 +91,10 @@ public static partial class PromptRenderer
         // {
         //     sb.AppendLine(agent.SystemPrompt);
         // }
-        sb.AppendLine("--------------");
+        sb.AppendLine("-------SYSTEM PROMPT-------");
         sb.AppendLine(botConfig.InitialSystemPrompt);
+        sb.AppendLine("-------SUMMARIZATION-------");
+        sb.AppendLine(historyManager.GetSummary());
         return sb.ToString();
     }
     
@@ -151,7 +140,4 @@ public static partial class PromptRenderer
 
     [GeneratedRegex(@"<think>([\s\S]*?)</think>([\s\S]*)")]
     private static partial Regex CotRegex();
-    
-    [GeneratedRegex(@"([\s\S]*?)<memory>([\s\S]*?)</memory>")]
-    private static partial Regex MemoryRegex();
 }

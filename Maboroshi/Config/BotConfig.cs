@@ -5,6 +5,8 @@ public class BotConfig
     public string ApiEndpoint { get; set; } = string.Empty;
     public string ApiKey { get; set; } = string.Empty;
     public string ApiModel { get; set; } = string.Empty;
+    public string BotName { get; set; } = string.Empty;
+    public string SummarizeModel { get; set; } = string.Empty;
     public bool UseTools { get; set; } = true;
     public bool UseCot { get; set; } = false;
     public float Temperature { get; set; } = 0.8f;
@@ -16,21 +18,13 @@ public class BotConfig
     public string EmbeddingEndpoint { get; set; } = string.Empty;
     public string EmbeddingKey { get; set; } = string.Empty;
     public string EmbeddingModel { get; set; } = string.Empty;
-    
     public string InitialSystemPrompt { get; set; } = string.Empty;
-
     public float WaitForUser { get; set; } = 10;
-
     public float MinimumTime { get; set; } = 1;
-
     public float TimePerCharacter { get; set; } = 0.05f;
-    
     public UserProfile UserProfile { get; set; } = new();
-
     public ProactiveSettings Proactive { get; set; } = new();
-    
     public HistorySettings History { get; set; } = new();
-    
     public VoiceSettings Voice { get; set; } = new();
 }
 

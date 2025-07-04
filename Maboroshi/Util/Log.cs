@@ -1,65 +1,108 @@
 ﻿using Spectre.Console;
+using System.Runtime.CompilerServices;
 
 namespace Maboroshi.Util;
 
 public static class Log
 {
     private const string TypedColor = "orchid2";
-    
-    public static void Debug(string msg, string type = "")
+    private const string DebugLevel = "DEBUG";
+    private const string InfoLevel = "INFO";
+    private const string WarnLevel = "WARN";
+    private const string ErrorLevel = "ERROR";
+    private const string CriticalLevel = "CRITICAL";
+    private const string DateTimeFormat = "yyyy-MM-dd HH:mm:ss.fff";
+
+    // Configuration options
+    private static bool EnableDebug { get; set; } = true;
+    private static bool IncludeScope { get; set; } = true;
+    private static bool IncludeSource { get; set; } = true;
+
+    private static void LogMessage(
+        string level,
+        string msg,
+        string scope = "",
+        string color = "white",
+        string backgroundColor = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
     {
-        if (!string.IsNullOrEmpty(type))
+        string formattedMessage = string.Empty;
+
+        // Time
+        formattedMessage += $"[grey]{DateTime.Now.ToString(DateTimeFormat)}[/] ";
+
+        // Source Information
+        if (IncludeSource)
         {
-            msg = $"[{TypedColor}][[{type}]][/] " + msg;
+            var fileName = Path.GetFileName(sourceFilePath);
+            formattedMessage += $"[grey]({fileName}:{sourceLineNumber} - {memberName})[/]\n";
         }
-        AnsiConsole.Markup($"[grey][[MABOROSHI-DEBUG]][/] {msg}");
+
+        // Scope
+        if (IncludeScope && !string.IsNullOrEmpty(scope))
+        {
+            formattedMessage += $"[{TypedColor}][[{scope}]][/] ";
+        }
+
+        var markup = $"[{color}";
+        if (!string.IsNullOrEmpty(backgroundColor))
+        {
+            markup += $" on {backgroundColor}";
+        }
+        markup += $"][[MABOROSHI]] [[{level}]][/] {formattedMessage}{{0}}";
+
+        AnsiConsole.Markup(markup, Markup.Escape(msg));
         AnsiConsole.WriteLine();
     }
-    
-    public static void Info(string msg, string type = "")
+
+    public static void Debug(string msg, string scope = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
     {
-        if (!string.IsNullOrEmpty(type))
+        if (EnableDebug)
         {
-            msg = $"[{TypedColor}][[{type}]][/] " + msg;
+            LogMessage(DebugLevel, msg, scope, "grey", memberName: memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
         }
-        AnsiConsole.Markup($"[white][[MABOROSHI-INFO]][/] {msg}");
-        AnsiConsole.WriteLine();
     }
-    
-    public static void Warning(string msg, string type = "")
+
+    public static void Info(string msg, string scope = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
     {
-        if (!string.IsNullOrEmpty(type))
-        {
-            msg = $"[{TypedColor}][[{type}]][/] " + msg;
-        }
-        AnsiConsole.Markup($"[yellow][[MABOROSHI-WARN]][/] {msg}");
-        AnsiConsole.WriteLine();
+        LogMessage(InfoLevel, msg, scope, "white", memberName: memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
     }
-    
-    public static void Error(string msg, string type = "")
+
+    public static void Warning(string msg, string scope = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
     {
-        if (!string.IsNullOrEmpty(type))
-        {
-            msg = $"[{TypedColor}][[{type}]][/] " + msg;
-        }
-        AnsiConsole.Markup($"[red][[MABOROSHI-ERROR]][/] {msg}");
-        AnsiConsole.WriteLine();
+        LogMessage(WarnLevel, msg, scope, "yellow", memberName: memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
     }
-    
-    public static void Critical(string msg, string type = "")
+
+    public static void Error(string msg, string scope = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
     {
-        if (!string.IsNullOrEmpty(type))
-        {
-            msg = $"[{TypedColor}][[{type}]][/] " + msg;
-        }
-        AnsiConsole.Markup($"[red on white][[MABOROSHI-CRITICAL]][/] {msg}");
-        AnsiConsole.WriteLine();
+        LogMessage(ErrorLevel, msg, scope, "red", memberName: memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
+    }
+
+    public static void Critical(string msg, string scope = "",
+        [CallerMemberName] string memberName = "",
+        [CallerFilePath] string sourceFilePath = "",
+        [CallerLineNumber] int sourceLineNumber = 0)
+    {
+        LogMessage(CriticalLevel, msg, scope, "red", "white", memberName: memberName, sourceFilePath: sourceFilePath, sourceLineNumber: sourceLineNumber);
     }
 
     public static void Exception(Exception ex)
     {
-        AnsiConsole.WriteException(ex, 
-            ExceptionFormats.ShortenPaths | ExceptionFormats.ShortenTypes |
-            ExceptionFormats.ShortenMethods | ExceptionFormats.ShowLinks);
+        AnsiConsole.WriteException(ex,
+            ExceptionFormats.ShortenEverything | ExceptionFormats.ShowLinks);
     }
 }

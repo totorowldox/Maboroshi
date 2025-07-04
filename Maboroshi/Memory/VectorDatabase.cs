@@ -18,57 +18,77 @@ public class QueryResult
     public float SimilarityScore { get; init; }
 }
 
-public class VectorDatabase(MaboroshiBot bot, ITextSerializer serializer)
+public class VectorDatabase(MaboroshiBot bot)
 {
     private List<VectorEntry> _entries = [];
+    private readonly Lock _lock = new();
 
     public void AddText(string text, float[] vector)
     {
-        _entries.Add(new VectorEntry { Text = text, Vector = vector, Date = DateTime.Now });
-        Save(bot.BotConfig.VectorDbFile);
+        lock (_lock)
+        {
+            _entries.Add(new VectorEntry { Text = text, Vector = vector, Date = DateTime.Now });
+            Save(bot.BotConfig.VectorDbFile);
+        }
     }
 
     public IEnumerable<QueryResult> Query(float[] queryVector, int topK)
     {
-        var results = new List<QueryResult>();
 
-        foreach (var entry in _entries)
+        lock (_lock)
         {
-            var similarity = ComputeCosineSimilarity(queryVector, entry.Vector);
-            results.Add(new QueryResult
-            {
-                Text = entry.Text,
-                SimilarityScore = similarity
-            });
-        }
+            var results = new List<QueryResult>();
 
-        return results.OrderByDescending(r => r.SimilarityScore).Take(topK);
+            foreach (var entry in _entries)
+            {
+                var similarity = ComputeCosineSimilarity(queryVector, entry.Vector);
+                results.Add(new QueryResult
+                {
+                    Text = entry.Text,
+                    SimilarityScore = similarity
+                });
+            }
+
+            return results.OrderByDescending(r => r.SimilarityScore).Take(topK);
+        }
     }
-    
+
     public bool Delete(string text)
     {
-        var deleted = _entries.RemoveAll(e => e.Text == text) > 0;
-        Save(bot.BotConfig.VectorDbFile);
-        return deleted;
+
+        lock (_lock)
+        {
+            var deleted = _entries.RemoveAll(e => e.Text == text) > 0;
+            Save(bot.BotConfig.VectorDbFile);
+            return deleted;
+        }
     }
 
     private void Save(string filePath)
     {
-        var content = serializer.Serialize(_entries);
-        File.WriteAllText(filePath, content);
+
+        lock (_lock)
+        {
+            var content = bot.Container.GetInstance<ITextSerializer>().Serialize(_entries);
+            File.WriteAllText(filePath, content);
+        }
     }
 
     public void Load(string filePath)
     {
-        if (!File.Exists(filePath))
-        {
-            Log.Debug("No vector database found, creating a new one.");
-            _entries = [];
-            return;
-        }
 
-        var content = File.ReadAllText(filePath);
-        _entries = serializer.Deserialize<List<VectorEntry>>(content) ?? [];
+        lock (_lock)
+        {
+            if (!File.Exists(filePath))
+            {
+                Log.Debug("No vector database found, creating a new one.", "MEMORY");
+                _entries = [];
+                return;
+            }
+
+            var content = File.ReadAllText(filePath);
+            _entries = bot.Container.GetInstance<ITextSerializer>().Deserialize<List<VectorEntry>>(content) ?? [];
+        }
     }
 
     /// <summary>
@@ -83,12 +103,6 @@ public class VectorDatabase(MaboroshiBot bot, ITextSerializer serializer)
         if (vectorA.Length != vectorB.Length)
             throw new ArgumentException("Vectors must be of the same length");
 
-        var dotProduct = 0f;
-        for (var i = 0; i < vectorA.Length; i++)
-        {
-            dotProduct += vectorA[i] * vectorB[i];
-        }
-        
-        return dotProduct;
+        return vectorA.Select((t, i) => t * vectorB[i]).Sum();
     }
 }

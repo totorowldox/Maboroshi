@@ -42,11 +42,11 @@ public class AudioAgent(MaboroshiBot bot, ISpeechProvider speech) : IAgent
             await bot.SendToUser(msg, fileName);
             
             // Voice input is also message!
-            bot.AppendAssistantHistory(msg);
+            await bot.AppendAssistantHistory(msg);
         }
         catch
         {
-            Log.Error("Audio synthesis failed");
+            Log.Error("Audio synthesis failed", "SPEECH");
         }
         return "OK";
     }

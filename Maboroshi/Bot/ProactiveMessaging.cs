@@ -1,4 +1,5 @@
 ﻿using Maboroshi.Prompt;
+using Maboroshi.Util;
 
 namespace Maboroshi.Bot;
 
@@ -33,7 +34,7 @@ public class ProactiveMessaging(MaboroshiBot bot) : IDisposable
                     bot.BotConfig.Proactive.Prompts[
                         Random.Shared.Next(bot.BotConfig.Proactive.Prompts.Length)];
 
-                Console.WriteLine($"\n[MABOROSHI-DEBUG] Triggering a proactive message, content: {randomChoice}");
+                Log.Info($"Triggering a proactive message, content: {randomChoice}", "PROACTIVE");
 
                 await bot.GetResponse(PromptRenderer.RenderProactiveMessagePrompt(randomChoice));
             }

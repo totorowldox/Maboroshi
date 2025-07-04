@@ -1,4 +1,4 @@
-﻿using System.ClientModel;
+using System.ClientModel;
 using Maboroshi.Config;
 using Maboroshi.Memory;
 using Maboroshi.Personification;
@@ -21,15 +21,18 @@ public class MaboroshiBot : IDisposable
     
     public Func<string, string, Task> SendToUser { get; }
 
+    private string _systemPrompt;
     private readonly ChatCompletionOptions _chatOption;
-    private readonly string _systemPrompt;
     private readonly ChatClient _client;
     private readonly ProactiveMessaging? _proactive;
+    private readonly MemorySummarizationService _memorySummarizationService;
     private readonly HistoryManager _history;
     private readonly ToolCallManager _toolCallManager;
     private readonly VectorizationUtil _vectorizationUtil;
     private CancellationTokenSource _cts = new();
+    private CancellationTokenSource _waitForUserCts = new();
     private string _userMessageQueue = string.Empty;
+    private readonly List<ChatMessageContentPart> _images = [];
     private bool _isWaiting;
 
     public MaboroshiBot(BotConfig config, Func<string, string, Task> sendToUser, Container? container = null)
@@ -78,15 +81,32 @@ public class MaboroshiBot : IDisposable
         {
             _toolCallManager.AppendAvailableToolCalls(_chatOption.Tools);
         }
-        
-        _systemPrompt = PromptRenderer.RenderInitialSystemPrompt(BotConfig);
+
+        _memorySummarizationService = Container.GetInstance<MemorySummarizationService>();
+        _memorySummarizationService.StartSummarizationThread();
+
+        RefreshSystemPrompt();
+    }
+
+    public void AppendImage(BinaryData image)
+    {
+        _images.Add(ChatMessageContentPart.CreateImagePart(image, "image/jpeg"));
+    }
+    
+    public void AppendImage(Uri imageUri)
+    {
+        Log.Debug("Appending image to queue");
+        _images.Add(ChatMessageContentPart.CreateImagePart(imageUri));
     }
 
     public async Task GetResponse(string message)
     {
+        Log.Debug($"Receive user input: {message}");
         if (_isWaiting)
         {
-            EnqueueUserMessage(message, prependNewLine: true);
+            await _waitForUserCts.CancelAsync();
+            _waitForUserCts.Dispose();
+            _waitForUserCts = new CancellationTokenSource();
         }
 
         if (IsResponding)
@@ -95,7 +115,10 @@ public class MaboroshiBot : IDisposable
         }
 
         EnqueueUserMessage(message);
-        await WaitForUserAsync();
+        if (await WaitForUserAsync())
+        {
+            return;
+        }
 
         IsResponding = true;
         try
@@ -107,14 +130,15 @@ public class MaboroshiBot : IDisposable
                 response = BotConfig.UseCot ? PromptRenderer.ExtractUserResponse(response) : response;
                 var assistantMessage = ChatMessage.CreateAssistantMessage(response);
                 messages.Add(assistantMessage);
-                _history.AddMessage(assistantMessage);
                 await SendFormattedResponseAsync(response);
+                await _history.AddMessage(ChatMessage.CreateUserMessage(_userMessageQueue));
+                await _history.AddMessage(assistantMessage);
             }
         }
         catch (OperationCanceledException)
         {
             ResetCancellationToken();
-            Log.Info("Response interrupted.");
+            Log.Debug("Response interrupted.");
         }
         catch (Exception ex)
         {
@@ -127,30 +151,48 @@ public class MaboroshiBot : IDisposable
         }
     }
 
-    public void AppendAssistantHistory(string message)
+    public async Task AppendAssistantHistory(string message)
     {
-        _history.AddMessage(ChatMessage.CreateAssistantMessage(message));
+        await _history.AddMessage(ChatMessage.CreateAssistantMessage(message));
     }
     
     #region Helper Methods
 
-    private void EnqueueUserMessage(string message, bool prependNewLine = false)
+    private void EnqueueUserMessage(string message, bool prependNewLine = true)
     {
         var formattedMessage = PromptRenderer.FormatMessage(message);
         _userMessageQueue += prependNewLine ? '\n' + formattedMessage : formattedMessage;
     }
 
-    private async Task WaitForUserAsync()
+    /// <summary>
+    /// Wait for user input
+    /// </summary>
+    /// <returns>Is cancelled</returns>
+    private async Task<bool> WaitForUserAsync()
     {
         _isWaiting = true;
-        await Task.Delay(TimeSpan.FromSeconds(BotConfig.WaitForUser));
-        _isWaiting = false;
+        try
+        {
+            await Task.Delay(TimeSpan.FromSeconds(BotConfig.WaitForUser), _waitForUserCts.Token);
+            return false;
+        }
+        catch (TaskCanceledException)
+        {
+            Log.Debug("WaitForUserAsync cancelled, restarting.");
+        }
+        finally
+        {
+            _isWaiting = false;
+        }
+        return true;
     }
 
     private List<ChatMessage> PrepareChatMessages()
     {
         var messages = _history.GetRecentHistory(BotConfig.History.BringToContext);
-        var userMessage = ChatMessage.CreateUserMessage(_userMessageQueue);
+        var contentParts = new List<ChatMessageContentPart> {ChatMessageContentPart.CreateTextPart(_userMessageQueue)};
+        contentParts.AddRange(_images);
+        var userMessage = ChatMessage.CreateUserMessage(contentParts);
         messages.Add(userMessage);
 
         if (BotConfig.EnableVectorDb)
@@ -167,8 +209,6 @@ public class MaboroshiBot : IDisposable
         {
             messages.Insert(0, ChatMessage.CreateSystemMessage(_systemPrompt));
         }
-
-        _history.AddMessage(userMessage);
         //LogDebugMessages(messages);
         return messages;
     }
@@ -243,17 +283,29 @@ public class MaboroshiBot : IDisposable
     private void ResetState()
     {
         _userMessageQueue = string.Empty;
+        _images.Clear();
         IsResponding = false;
         _history.Save();
     }
 
     #endregion
     
+    
+    public void RefreshSystemPrompt()
+    {
+        _systemPrompt = PromptRenderer.RenderInitialSystemPrompt(BotConfig, _history);
+        Log.Debug($"System prompt refreshed: \n{_systemPrompt}", "PROMPT");
+    }
+    
     public void Dispose()
     {
-        _cts.Cancel();
+        Log.Info("Shutting down...");
         _proactive?.Dispose();
+        _memorySummarizationService.Dispose();
+        _cts.Cancel();
         _cts.Dispose();
+        _waitForUserCts.Cancel();
+        _waitForUserCts.Dispose();
         GC.SuppressFinalize(this);
     }
 
@@ -262,15 +314,16 @@ public class MaboroshiBot : IDisposable
         get
         {
             var container = new Container();
-            container.Register<ITextSerializer, JsonSerializer>(Lifestyle.Singleton);
+            container.Register<ITextSerializer, JsonSerializer>(Lifestyle.Transient);
             container.Register<HistoryManager>(Lifestyle.Singleton);
-            container.Register<MemoryAgent>(Lifestyle.Singleton);
             container.Register<PersonificationAgent>(Lifestyle.Singleton);
             container.Register<ProactiveMessaging>(Lifestyle.Singleton);
+            container.Register<MemorySummarizationService>(Lifestyle.Singleton);
             container.Register<ToolCallManager>(Lifestyle.Singleton);
             container.Register<VectorDatabase>(Lifestyle.Singleton);
             container.Register<VectorizationUtil>(Lifestyle.Singleton);
             container.Register<Audio.AudioAgent>(Lifestyle.Singleton);
+            container.Register<MemorySummary>(Lifestyle.Singleton);
             return container;
         }
     }

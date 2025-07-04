@@ -4,7 +4,7 @@ using Maboroshi.Util;
 
 namespace Maboroshi.Audio.Providers;
 
-public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeechProvider
+public class AivisSpeech(MaboroshiBot bot) : ISpeechProvider
 {
     private static readonly HttpClient Client = new() { BaseAddress = new Uri("http://127.0.0.1:10101") };
     
@@ -13,7 +13,7 @@ public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeech
         var response = await Client.GetAsync("/speakers");
         response.EnsureSuccessStatusCode();
         var responseBody = await response.Content.ReadAsStringAsync();
-        return serializer.Deserialize<dynamic>(responseBody);
+        return bot.Container.GetInstance<ITextSerializer>().Deserialize<dynamic>(responseBody);
     }
 
     private async Task<dynamic> GenerateAudioQuery(string text, string speakerId)
@@ -21,12 +21,13 @@ public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeech
         var response = await Client.PostAsync($"/audio_query?text={text}&speaker={speakerId}", null);
         response.EnsureSuccessStatusCode();
         var responseBody = await response.Content.ReadAsStringAsync();
-        return serializer.Deserialize<dynamic>(responseBody);
+        return bot.Container.GetInstance<ITextSerializer>().Deserialize<dynamic>(responseBody);
     }
 
     private async Task<Stream> SynthesizeAudio(dynamic query, string speakerId)
     {
-        var content = new StringContent(serializer.Serialize(query), System.Text.Encoding.UTF8, "application/json");
+        var content = new StringContent(bot.Container.GetInstance<ITextSerializer>().Serialize(query),
+            System.Text.Encoding.UTF8, "application/json");
         var response = await Client.PostAsync($"/synthesis?speaker={speakerId}", content);
         response.EnsureSuccessStatusCode();
         return await response.Content.ReadAsStreamAsync();
@@ -42,7 +43,8 @@ public class AivisSpeech(MaboroshiBot bot, ITextSerializer serializer) : ISpeech
 
         // Generate audio query
         var query = await GenerateAudioQuery(text, speakerId);
-         Log.Debug("Audio query generated: " + serializer.Serialize(query), "AIVIS-SPEECH");
+        Log.Debug("Audio query generated: " + bot.Container.GetInstance<ITextSerializer>().Serialize(query),
+            "AIVIS-SPEECH");
 
         // Synthesize audio
         return await SynthesizeAudio(query, speakerId);
